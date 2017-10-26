@@ -33,7 +33,7 @@ public class SMSTask extends Task<Man> {
 		int rdb=0,count=0,err=0;
 		serialPort = new SerialPort("COM4");
 		portReader = new PortReader();
-		String smsText="Ваше обращение о перерасчете рассмотрено. Перерасчет невыгоден. ";
+		String smsText="пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. ";
 		conn2 = DriverManager.getConnection("jdbc:mysql://10.48.0.62:3306/Indicatives", "user", "1111");
 		stmt2 = conn2.createStatement();
 		rs2 = stmt2.executeQuery("select * from dst_upfr");
@@ -95,27 +95,27 @@ public class SMSTask extends Task<Man> {
 	
 	public boolean smsSend(String sms, String phone) throws IOException {
 
-		// Передаём в конструктор имя порта
+		// пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 		
 		try {
-			// Открываем порт
+			// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 			serialPort.openPort();
 			
-			// Выставляем параметры
+			// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 			serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 			// serialPort.addEventListener(new PortReader(),
 			// SerialPort.MASK_RXCHAR);
 
-			// Формируем сообщение
+			// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 			String message = "0011000B91" + reversePhone(phone) + "0008A7" + StringToUSC2(sms);
 
-			// Отправляем запрос устройству
-			char c = 0x0D;// Символ перевода каретки CR
+			// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+			char c = 0x0D;// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ CR
 			String str = "AT+CMGF=0" + c;
 			serialPort.writeString(str);
-			Thread.sleep(500); // По-идее, здесь надо ждать ответ модема, но мы
-								// ограничимся просто ожиданием в полсекунды
-			// Очистим порт
+			Thread.sleep(500); // пїЅпїЅ-пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅ
+								// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+			// пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 			serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
 		
 			str = "AT+CMGS=" + getSMSLength(message) + c;
@@ -123,7 +123,7 @@ public class SMSTask extends Task<Man> {
 			Thread.sleep(500);
 			serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
 			// 
-			c = 26;// Символ CTRL+Z
+			c = 26;// пїЅпїЅпїЅпїЅпїЅпїЅ CTRL+Z
 			serialPort.writeString(message + c);
 			Thread.sleep(1000);
 
@@ -146,7 +146,7 @@ public class SMSTask extends Task<Man> {
 		serialPort.addEventListener(portReader);
 		
 		serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
-		char c = 0x0D;// Символ перевода каретки CR
+		char c = 0x0D;// пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ CR
 		String cmd ="AT+CMGL=4"+c;
 		serialPort.writeString(cmd);
 		serialPort.removeEventListener();
@@ -162,7 +162,7 @@ public class SMSTask extends Task<Man> {
 		//System.out.println("HERE");
 		phone=phone.replaceAll("^8", "7").replaceAll("\\+", "");
 		if (phone.length() < 11 || !phone.matches("\\d+")) {
-			throw new NumberFormatException("Номер должен состоять из 11 цифр");
+			throw new NumberFormatException("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ 11 пїЅпїЅпїЅпїЅ");
 		}
 		phone += "F";
 		String phoneRev = "";
@@ -176,7 +176,7 @@ public class SMSTask extends Task<Man> {
 		String str = "";
 
 		byte[] msgb = text.getBytes("UTF-16");
-		// Конвертация самой СМС
+		// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
 		String msgPacked = "";
 		for (int i = 2; i < msgb.length; i++) {
 			String b = Integer.toHexString((int) msgb[i]);
@@ -185,13 +185,13 @@ public class SMSTask extends Task<Man> {
 			msgPacked += b;
 		}
 
-		// Длина получившегося пакета в нужном формате
+		// пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		String msglenPacked = Integer.toHexString(msgPacked.length() / 2);
-		// Если длина нечётная - добавляем в конце 0
+		// пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ 0
 		if (msglenPacked.length() < 2)
 			str += "0";
 
-		// Формируем строку из длины и самого тела пакета
+		// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 		str += msglenPacked;
 		str += msgPacked;
 
@@ -201,7 +201,7 @@ public class SMSTask extends Task<Man> {
 
 	}
 	
-	// Получить длину сообщения
+	// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		private int getSMSLength(String sms) {
 			return (sms.length() / 2 - 1);
 		}
@@ -211,9 +211,9 @@ public class SMSTask extends Task<Man> {
 			public void serialEvent(SerialPortEvent event) {
 				if (event.isRXCHAR() && event.getEventValue() > 0) {
 					try {
-						// Получаем ответ от устройства, обрабатываем данные и т.д.
+						// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅ.пїЅ.
 						String data = serialPort.readString(event.getEventValue());
-						// И снова отправляем запрос
+						// пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 						System.out.println("response: " + data);
 					} catch (SerialPortException ex) {
 						System.out.println(ex);
