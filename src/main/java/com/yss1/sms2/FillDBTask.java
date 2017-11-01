@@ -13,6 +13,7 @@ import javafx.concurrent.Task;
 
 public class FillDBTask extends Task<Man> {
 
+	@SuppressWarnings("restriction")
 	@Override
 	protected Man call() throws ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
 		// Connection con = null;
@@ -48,8 +49,8 @@ public class FillDBTask extends Task<Man> {
 
 			while (rs.next()) {
 				tel = "";
-				if (rs.getString(6) != null) {
-					tel = getTel(rs.getString(6));
+				if (rs.getString("tel") != null) {
+					tel = getTel(rs.getString("tel"));
 					if (!tel.isEmpty()) {
 						ri++;
 					} else {
@@ -62,21 +63,21 @@ public class FillDBTask extends Task<Man> {
 					this.updateProgress(rp, rdb);
 				}
 				sql2 = "select dst,snils,tel,state,datein,dateend,id_process from work_table where id_process="
-						+ rs.getInt(5);
+						+ rs.getInt("id_process");
 
 				rs2 = stmt2.executeQuery(sql2);
 				sql2 = "";
-				if (rs2.next()) {
-					if (rs2.getInt(4) < 1 && !tel.equals(rs2.getString(3))) {
-						sql2 = "update work_table set  tel='" + tel + "' where id_process=" + rs.getInt(5);
+				if (rs2.next()) {//правим тел. только если не уведомляли
+					if (rs2.getInt("state") < 1 && !tel.equals(rs2.getString("tel"))) {
+						sql2 = "update work_table set  tel='" + tel + "' where id_process=" + rs.getInt("id_process");
 
 					} else {
 
 					}
-				} else {
+				} else {//не нашли - вставим новенького
 					sql2 = "insert into work_table (dst,snils,tel,state,datein,dateend,id_process) values ("
-							+ rs.getInt(2) + ",'" + rs.getString(7) + "','" + tel + "',0,'" + rs.getDate(3) + "','"
-							+ rs.getDate(4) + "'," + rs.getInt(5) + ")";
+							+ rs.getInt("dst") + ",'" + rs.getString("cnils") + "','" + tel + "',0,'" + rs.getDate("d_comming") + "','"
+							+ rs.getDate(4) + "'," + rs.getInt("id_process") + ")";
 				}
 				rs2.close();
 				if (!sql2.isEmpty()) {

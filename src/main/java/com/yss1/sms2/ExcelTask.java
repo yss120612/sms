@@ -18,6 +18,7 @@ import org.apache.poi.ss.usermodel.Row;
 
 import javafx.concurrent.Task;
 
+@SuppressWarnings("restriction")
 public class ExcelTask extends Task<Man> {
 	HSSFWorkbook workbook=null;
 	@Override
@@ -38,8 +39,11 @@ public class ExcelTask extends Task<Man> {
 		int files=0;
 		int i=0;
 		Date dt=new Date();
-		SimpleDateFormat sdf=new SimpleDateFormat("dd.MM.yyyy");
-		sdf.format(dt);
+		SimpleDateFormat sdf     =new SimpleDateFormat("dd.MM.yyyy");
+		SimpleDateFormat sdfsql = new SimpleDateFormat("yyyy-.MM.dd");
+		
+		
+		
 		
 		DriverManager.registerDriver(new com.mysql.jdbc.Driver());
 		DriverManager.setLoginTimeout(10);
@@ -77,7 +81,7 @@ public class ExcelTask extends Task<Man> {
 				files++;
 				if (workbook!=null)
 				{
-				  try (FileOutputStream out = new FileOutputStream(new File("d:\\box\\"+rs2.getInt(1)+"_"+sdf.format(dt)+".xls"))) {
+				  try (FileOutputStream out = new FileOutputStream(new File("d:\\box\\"+rs2.getInt("dst")+"_"+sdf.format(dt)+".xls"))) {
 				         workbook.write(out);
 				     } catch (IOException e) {
 				         e.printStackTrace();
@@ -86,15 +90,15 @@ public class ExcelTask extends Task<Man> {
 				  workbook.close();
 				}
 				workbook= new HSSFWorkbook();
-				sheet= workbook.createSheet("ðàéîí "+rs2.getInt(1));
+				sheet= workbook.createSheet("Ð Ð°Ð¹Ð¾Ð½ "+rs2.getInt("dst"));
 				sheet.setColumnWidth(0,4000);
 				counter=0;
-				current=rs2.getInt(1);
+				current=rs2.getInt("dst");
 			}
 		
 	    row = sheet.createRow(counter++);
 	    c=row.createCell(0);
-	    S=rs2.getString(2);
+	    S=rs2.getString("snils");
 	    c.setCellValue(S.substring(0,3)+"-"+S.substring(3,6)+"-"+S.substring(6,9)+" "+S.substring(9));
 	    i++;
 	    if (i % 100 == 0) {
@@ -103,7 +107,7 @@ public class ExcelTask extends Task<Man> {
 		}
 	}
 		rs2.close();
-		sql="update work_table set state=1 where state=0 and tel=''";
+		sql="update work_table set state=1, dateprocess='"+sdfsql.format(dt)+"' where state=0 and tel=''";
 		stmt2.executeUpdate(sql);
 		stmt2.close();
 		conn2.close();

@@ -10,6 +10,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+@SuppressWarnings("restriction")
 public class Main extends Application {
 
 	public static Log log;

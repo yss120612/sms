@@ -16,118 +16,192 @@ import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
 
+@SuppressWarnings("restriction")
 public class SMSTask extends Task<Man> {
 	private SerialPort serialPort;
-	private PortReader portReader;
-	private HashMap<Integer,String> rns;
+	private HashMap<Integer, String> rns;
 	private ArrayList<Integer> sendOK;
-	
+	private static byte msgNo=(byte)255;
+	private static boolean more;
+	private ArrayList<String> smsParts;
+
+	@SuppressWarnings("unused")
 	@Override
 	protected Man call() throws Exception {
 		// TODO Auto-generated method stub
-		rns=new HashMap<Integer,String>();
-		sendOK=new ArrayList<Integer>();
+		rns = new HashMap<Integer, String>();
+		sendOK = new ArrayList<Integer>();
 		Connection conn2 = null;
 		Statement stmt2 = null;
 		ResultSet rs2 = null;
-		int rdb=0,count=0,err=0;
+		int rdb = 0, count = 0, err = 0;
 		serialPort = new SerialPort("COM4");
-		portReader = new PortReader();
-		String smsText="���� ��������� � ����������� �����������. ���������� ���������. ";
+		smsParts = new ArrayList<String>();
+		String smsText = "Ваше обращение о перерасчете рассмотрено. Перерасчет невыгоден. ";
 		conn2 = DriverManager.getConnection("jdbc:mysql://10.48.0.62:3306/Indicatives", "user", "1111");
 		stmt2 = conn2.createStatement();
 		rs2 = stmt2.executeQuery("select * from dst_upfr");
 		int rn;
-		while (rs2.next())
-		{
-			rn=rs2.getInt(1)-48000;
-			if (rn==100) rn=106;
-			rns.put(rn, rs2.getString(2));
-			//System.out.println(rn+"="+rs2.getString(2));
+		while (rs2.next()) {
+			rn = rs2.getInt("dst") - 48000;
+			if (rn == 100)
+				rn = 106;
+			rns.put(rn, rs2.getString("vc_upfr"));
 		}
 		rs2.close();
 		stmt2.close();
 		conn2.close();
-		//if (1==1) return new Man(1,1,1);
-		
-		
-		
+
+
 		conn2 = DriverManager.getConnection("jdbc:mysql://10.48.0.62:3306/sms", "user", "1111");
 		stmt2 = conn2.createStatement();
-		String sql="select count(*) from work_table where state=0 and tel<>''";
+		String sql = "select count(*) from work_table where state=0 and tel<>''";
 		rs2 = stmt2.executeQuery(sql);
 		if (rs2.next()) {
 			rdb = rs2.getInt(1);
 		}
 		rs2.close();
-		sql="select count(*) from work_table where state=0 and tel<>'' order by dst";
+
+		sql = "select * from work_table where state=0 and tel<>'' order by dst";
 		rs2 = stmt2.executeQuery(sql);
+
+			
+
+		while (rs2.next()) {
 		
-		smsSend(smsText,"79501293569");
-		while (rs2.next())
-		{
-			if (smsSend(smsText+rns.get(rs2.getInt("dst")),rs2.getString("tel")))
-			{
-				sendOK.add(rs2.getInt("id_process"));
-				count++;
-			}
-			else
-			{
-				err++;
+			if (smsLargeSend(smsText+rns.get(rs2.getInt("dst")),rs2.getString("tel")))
+			 {
+			 sendOK.add(rs2.getInt("id"));
+			 count++;
+			 }
+			 else
+			 {
+			 err++;
 			}
 			Thread.sleep(2000);
-			this.updateMessage((count+err) + " records processed...");
-			this.updateProgress(count+err, rdb);
-			
+			this.updateMessage((count + err) + " records processed...");
+			this.updateProgress(count + err, rdb);
 		}
-		
+
 		rs2.close();
-		for (int k:sendOK)
-		{
-			stmt2.executeUpdate("update work_table set state=2 where id_process="+k);
+		for (int k : sendOK) {
+			stmt2.executeUpdate("update work_table set state=2 where id in " + sendOK.toString());
 		}
-		rs2.close();
 		stmt2.close();
 		conn2.close();
-		return new Man(rdb,count,err);
+		return new Man(rdb, count, err);
 	}
 
-	
-	public boolean smsSend(String sms, String phone) throws IOException {
+	private boolean makeParts(String text, int one) {
+		smsParts.clear();
+		int idx = 0;
+		while (idx < text.length()) {
+			try {
+				smsParts.add(text.substring(idx, idx + one >= text.length() ? text.length() : idx + one));
+			} catch (Exception Ex) {
+				System.out.println(Ex.getMessage());
+			}
+			idx += one;
+		}
+		return smsParts.size() > 0;
+	}
 
-		// ������� � ����������� ��� �����
-		
+	private class PortReader implements SerialPortEventListener {
+
+		public void serialEvent(SerialPortEvent event) {
+			if (event.isRXCHAR() && event.getEventValue() > 0) {
+				try {
+
+					String data = serialPort.readString(event.getEventValue());
+					if (!data.isEmpty())	
+					{
+						serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
+					}
+					System.out.println("response: " + data);
+					if (data.contains("CMGS:")) {
+						more = true;
+					}
+				} catch (SerialPortException ex) {
+					System.out.println(ex);
+				}
+			}
+		};
+
+	};
+
+	PortReader portReader = new PortReader();
+
+	public boolean smsLargeSend(String sms, String phone) throws IOException, SerialPortException {
+		if (!makeParts(sms, 67)) {
+			return false;
+		}
+		byte length = (byte) smsParts.size();
+		byte counter = 0;
+		msgNo = (byte) ((msgNo == 255) ? 0 : msgNo + 1);
+		if (length > 5) {
+			return false;
+		}
+
+		serialPort.openPort();
+		serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
+				SerialPort.PARITY_NONE);
+		serialPort.addEventListener(portReader, SerialPort.MASK_RXCHAR);
+		boolean success = true;
+		for (String s : smsParts) {
+			counter++;
+			if (!smsSend(s, phone, msgNo, counter, length)) {
+
+				success = false;
+				break;
+			}
+			more = false;
+			while (!more) {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		serialPort.removeEventListener();
+		serialPort.closePort();
+
+		return success;
+	}
+
+	public boolean smsSend(String sms, String phone, byte msNo, byte pNo, byte pAll) throws IOException {
 		try {
-			// ��������� ����
-			serialPort.openPort();
+			// 00 SCA
+			// 11 PDU-Type – Тип сообщения. Поле флагов (51 для многостраничного)
+			// 00 TP- MR – TP-Message-Reference нужно менять для каждого сообщения (кусочка)
+			// 0b количество цифр в номере получателя
+			// 91 тип номера получателя
+			// reverse phone
+			// 00 идентификатор протокола всегда 00
+			// 08 схема кодирования данных
+			// A7 время жизни
+
+			// String message = "0011000B91" + reversePhone(phone) + "0008A7" +
+			// StringToUSC2(sms);
+
+			String body = String.format("050003%02X%02X%02X", msgNo, pAll, pNo) + StringToUSC2(sms);
+//			String message = String.format("0041%02x0B91", msNo) + reversePhone(phone) + "0008A7"
+			String message = String.format("0041%02X0B91", pNo-1) + reversePhone(phone) + "0008"
+					+ String.format("%02X", body.length() / 2) + body;
+		
 			
-			// ���������� ���������
-			serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
-			// serialPort.addEventListener(new PortReader(),
-			// SerialPort.MASK_RXCHAR);
-
-			// ��������� ���������
-			String message = "0011000B91" + reversePhone(phone) + "0008A7" + StringToUSC2(sms);
-
-			// ���������� ������ ����������
-			char c = 0x0D;// ������ �������� ������� CR
+			char c = 0x0D;
 			String str = "AT+CMGF=0" + c;
 			serialPort.writeString(str);
-			Thread.sleep(500); // ��-����, ����� ���� ����� ����� ������, �� ��
-								// ����������� ������ ��������� � ����������
-			// ������� ����
-			serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
-		
+			Thread.sleep(1500);
+
 			str = "AT+CMGS=" + getSMSLength(message) + c;
 			serialPort.writeString(str);
-			Thread.sleep(500);
-			serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
-			// 
-			c = 26;// ������ CTRL+Z
+			Thread.sleep(1500);
+			
+			c = 26;// CTRL+Z
 			serialPort.writeString(message + c);
-			Thread.sleep(1000);
-
-			serialPort.closePort();
+			Thread.sleep(1500);
 
 			return true;
 		} catch (SerialPortException ex) {
@@ -138,31 +212,28 @@ public class SMSTask extends Task<Man> {
 			return false;
 		}
 	}
-	
-	public void smsRead() throws IOException
-	{
+
+	public void smsRead() throws IOException {
 		try {
-		serialPort.openPort();
-		serialPort.addEventListener(portReader);
-		
-		serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
-		char c = 0x0D;// ������ �������� ������� CR
-		String cmd ="AT+CMGL=4"+c;
-		serialPort.writeString(cmd);
-		serialPort.removeEventListener();
-		serialPort.closePort();
+			serialPort.openPort();
+			serialPort.addEventListener(portReader);
+
+			serialPort.setParams(SerialPort.BAUDRATE_9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1,
+					SerialPort.PARITY_NONE);
+			char c = 0x0D;// CR
+			String cmd = "AT+CMGL=4" + c;
+			serialPort.writeString(cmd);
+			serialPort.removeEventListener();
+			serialPort.closePort();
 		} catch (SerialPortException ex) {
-			//serialPort.closePort();
 			System.out.println(ex);
 		}
 	}
-	
-	
+
 	private String reversePhone(String phone) {
-		//System.out.println("HERE");
-		phone=phone.replaceAll("^8", "7").replaceAll("\\+", "");
+		phone = phone.replaceAll("^8", "7").replaceAll("\\+", "");
 		if (phone.length() < 11 || !phone.matches("\\d+")) {
-			throw new NumberFormatException("����� ������ �������� �� 11 ����");
+			throw new NumberFormatException("Номер должен содержать 11 цифр");
 		}
 		phone += "F";
 		String phoneRev = "";
@@ -171,55 +242,20 @@ public class SMSTask extends Task<Man> {
 		}
 		return phoneRev;
 	}
-	
-	private String StringToUSC2(String text) throws IOException {
-		String str = "";
 
+	private String StringToUSC2(String text) throws IOException {
 		byte[] msgb = text.getBytes("UTF-16");
-		// ����������� ����� ���
 		String msgPacked = "";
 		for (int i = 2; i < msgb.length; i++) {
-			String b = Integer.toHexString((int) msgb[i]);
-			if (b.length() < 2)
-				msgPacked += "0";
-			msgPacked += b;
+
+			msgPacked += String.format("%02X", msgb[i]);
 		}
+		return msgPacked;
+	}
 
-		// ����� ������������� ������ � ������ �������
-		String msglenPacked = Integer.toHexString(msgPacked.length() / 2);
-		// ���� ����� �������� - ��������� � ����� 0
-		if (msglenPacked.length() < 2)
-			str += "0";
-
-		// ��������� ������ �� ����� � ������ ���� ������
-		str += msglenPacked;
-		str += msgPacked;
-
-		str = str.toUpperCase();
-
-		return str;
+	private int getSMSLength(String sms) {
+		//-1 т.к. без ведушего 00 (смс колл центр)
+		return (sms.length() / 2 - 1);
+	}
 
 	}
-	
-	// �������� ����� ���������
-		private int getSMSLength(String sms) {
-			return (sms.length() / 2 - 1);
-		}
-
-		private class PortReader implements SerialPortEventListener {
-
-			public void serialEvent(SerialPortEvent event) {
-				if (event.isRXCHAR() && event.getEventValue() > 0) {
-					try {
-						// �������� ����� �� ����������, ������������ ������ � �.�.
-						String data = serialPort.readString(event.getEventValue());
-						// � ����� ���������� ������
-						System.out.println("response: " + data);
-					} catch (SerialPortException ex) {
-						System.out.println(ex);
-					}
-				}
-			}
-		}
-		
-}
