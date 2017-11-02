@@ -10,9 +10,10 @@
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
+//apply plugin: 'jar'
 
 //archivesBaseName = 'Concretepage'
-version = '1.0-SNAPSHOT' 
+version = '1.1-RELEASE' 
 repositories {
     //mavenCentral()
     jcenter()

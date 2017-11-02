@@ -76,12 +76,12 @@ public class ExcelTask extends Task<Man> {
 		while (rs2.next())
 		{
 			//System.out.println(i);
-			if (current!=rs2.getInt(1))
+			if (current!=rs2.getInt("dst"))
 			{
 				files++;
 				if (workbook!=null)
 				{
-				  try (FileOutputStream out = new FileOutputStream(new File("d:\\box\\"+rs2.getInt("dst")+"_"+sdf.format(dt)+".xls"))) {
+				  try (FileOutputStream out = new FileOutputStream(new File("d:\\box\\"+current+"_"+sdf.format(dt)+".xls"))) {
 				         workbook.write(out);
 				     } catch (IOException e) {
 				         e.printStackTrace();
@@ -106,6 +106,19 @@ public class ExcelTask extends Task<Man> {
 			this.updateProgress(i,total);
 		}
 	}
+		
+		if (workbook!=null)
+		{
+		 files++;
+		  try (FileOutputStream out = new FileOutputStream(new File("d:\\box\\"+current+"_"+sdf.format(dt)+".xls"))) {
+		         workbook.write(out);
+		     } catch (IOException e) {
+		         e.printStackTrace();
+		         System.out.println(e.getMessage());
+		     }
+		  workbook.close();
+		}
+		
 		rs2.close();
 		sql="update work_table set state=1, dateprocess='"+sdfsql.format(dt)+"' where state=0 and tel=''";
 		stmt2.executeUpdate(sql);

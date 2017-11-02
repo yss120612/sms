@@ -44,8 +44,26 @@ public class FillDBTask extends Task<Man> {
 			}
 			rs.close();
 
-			sql = "SELECT id,dst,d_comming,d_completion,id_process,tel,cnils  from KS_PER_SH WHERE gr4=1 AND otkaz=1";
+			sql = "SELECT id,dst,d_comming,d_completion,id_process,tel,cnils  from KS_PER_SH WHERE gr4=1 AND otkaz=1 and "
+					+ "(d_completion>date('2017-07-01') and dst=2 or "
+					+  "d_completion>date('2017-08-08') and dst=18 or "
+					+  "d_completion>date('2017-08-18') and dst=21 or "
+					+  "d_completion>date('2017-09-20') and dst=33 or "
+					+  "d_completion>date('2017-09-25') and dst=34 or "
+					+  "d_completion>date('2017-10-05') and dst=30 or "
+					+  "d_completion>date('2017-10-19') and dst in (26,31) or "
+					+  "d_completion>date('2017-10-20') and dst in (7,9,17,29) or "
+					+  "d_completion>date('2017-10-23') "
+					+ ")"
+					;
+			try
+			{
 			rs = stmt.executeQuery(sql);
+			}
+			catch (Exception e)
+			{
+				System.out.println(e.getMessage());
+			}
 
 			while (rs.next()) {
 				tel = "";

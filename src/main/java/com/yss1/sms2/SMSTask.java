@@ -21,11 +21,10 @@ public class SMSTask extends Task<Man> {
 	private SerialPort serialPort;
 	private HashMap<Integer, String> rns;
 	private ArrayList<Integer> sendOK;
-	private static byte msgNo=(byte)255;
+	private static byte msgNo = (byte) 255;
 	private static boolean more;
 	private ArrayList<String> smsParts;
 
-	@SuppressWarnings("unused")
 	@Override
 	protected Man call() throws Exception {
 		// TODO Auto-generated method stub
@@ -35,9 +34,9 @@ public class SMSTask extends Task<Man> {
 		Statement stmt2 = null;
 		ResultSet rs2 = null;
 		int rdb = 0, count = 0, err = 0;
-		serialPort = new SerialPort("COM4");
+		serialPort = new SerialPort("COM9");
 		smsParts = new ArrayList<String>();
-		String smsText = "Ваше обращение о перерасчете рассмотрено. Перерасчет невыгоден. ";
+		String smsText = "Ваше заявление о перерасчете рассмотрено. Перерасчет невыгоден. ";
 		conn2 = DriverManager.getConnection("jdbc:mysql://10.48.0.62:3306/Indicatives", "user", "1111");
 		stmt2 = conn2.createStatement();
 		rs2 = stmt2.executeQuery("select * from dst_upfr");
@@ -51,8 +50,10 @@ public class SMSTask extends Task<Man> {
 		rs2.close();
 		stmt2.close();
 		conn2.close();
-
-
+//		smsLargeSend(smsText+ rns.get(2)+"A", "79501293569");
+//		Thread.sleep(2000);
+//		smsLargeSend((smsText+ rns.get(2)).length()+smsText+ rns.get(2), "79501293569");
+//		if (1==1) return null;
 		conn2 = DriverManager.getConnection("jdbc:mysql://10.48.0.62:3306/sms", "user", "1111");
 		stmt2 = conn2.createStatement();
 		String sql = "select count(*) from work_table where state=0 and tel<>''";
@@ -62,31 +63,44 @@ public class SMSTask extends Task<Man> {
 		}
 		rs2.close();
 
-		sql = "select * from work_table where state=0 and tel<>'' order by dst";
-		rs2 = stmt2.executeQuery(sql);
-
-			
-
-		while (rs2.next()) {
-		
-			if (smsLargeSend(smsText+rns.get(rs2.getInt("dst")),rs2.getString("tel")))
-			 {
-			 sendOK.add(rs2.getInt("id"));
-			 count++;
-			 }
-			 else
-			 {
-			 err++;
+		sql = "select * from work_table where state=0 and tel<>'' order by dst,tel";
+		try {
+			rs2 = stmt2.executeQuery(sql);
+		} catch (Exception ex) {
+			System.out.println(ex.getMessage());
+		}
+		int max_session=0;
+		try {
+			while (rs2.next()) {
+				System.out.println("Посылаем тел:"+rs2.getString("tel"));
+				if (smsLargeSend(smsText + rns.get(rs2.getInt("dst")), rs2.getString("tel"))) {
+					sendOK.add(rs2.getInt("id"));
+					count++;
+				} else {
+					err++;
+				}
+				Thread.sleep(3000);
+				this.updateMessage((count + err) + " records processed...");
+				this.updateProgress(count + err, rdb);
+				if (++max_session>50) {
+					break;
+				}
 			}
-			Thread.sleep(2000);
-			this.updateMessage((count + err) + " records processed...");
-			this.updateProgress(count + err, rdb);
+		} catch (Exception ex) {
+			System.out.println(ex.getMessage());
+		}
+	
+		rs2.close();
+	
+		try {
+			sql = "update work_table set state=2 where id in " + sendOK.toString();
+			sql = sql.replace('[', '(').replace(']', ')');
+			stmt2.executeUpdate(sql);
+		} catch (Exception ex) {
+			System.out.println(ex.getMessage());
+			System.out.println(sql);
 		}
 
-		rs2.close();
-		for (int k : sendOK) {
-			stmt2.executeUpdate("update work_table set state=2 where id in " + sendOK.toString());
-		}
 		stmt2.close();
 		conn2.close();
 		return new Man(rdb, count, err);
@@ -113,8 +127,7 @@ public class SMSTask extends Task<Man> {
 				try {
 
 					String data = serialPort.readString(event.getEventValue());
-					if (!data.isEmpty())	
-					{
+					if (!data.isEmpty()) {
 						serialPort.purgePort(serialPort.PURGE_RXCLEAR | serialPort.PURGE_TXCLEAR);
 					}
 					System.out.println("response: " + data);
@@ -149,14 +162,15 @@ public class SMSTask extends Task<Man> {
 		boolean success = true;
 		for (String s : smsParts) {
 			counter++;
+			
 			if (!smsSend(s, phone, msgNo, counter, length)) {
 
 				success = false;
 				break;
 			}
-			more = false;
 			while (!more) {
 				try {
+					System.out.println("wait more...");
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -185,22 +199,26 @@ public class SMSTask extends Task<Man> {
 			// StringToUSC2(sms);
 
 			String body = String.format("050003%02X%02X%02X", msgNo, pAll, pNo) + StringToUSC2(sms);
-//			String message = String.format("0041%02x0B91", msNo) + reversePhone(phone) + "0008A7"
-			String message = String.format("0041%02X0B91", pNo-1) + reversePhone(phone) + "0008"
+			// String message = String.format("0041%02x0B91", msNo) + reversePhone(phone) +
+			// "0008A7"
+			String message = String.format("0041%02X0B91", pNo - 1) + reversePhone(phone) + "0008"
 					+ String.format("%02X", body.length() / 2) + body;
-		
-			
+
 			char c = 0x0D;
 			String str = "AT+CMGF=0" + c;
 			serialPort.writeString(str);
+			//System.out.println("port write:"+str);
 			Thread.sleep(1500);
 
 			str = "AT+CMGS=" + getSMSLength(message) + c;
 			serialPort.writeString(str);
+			//System.out.println("port write:"+str);
 			Thread.sleep(1500);
-			
+
 			c = 26;// CTRL+Z
+			more = false;
 			serialPort.writeString(message + c);
+			//System.out.println("port write:"+message);
 			Thread.sleep(1500);
 
 			return true;
@@ -254,8 +272,8 @@ public class SMSTask extends Task<Man> {
 	}
 
 	private int getSMSLength(String sms) {
-		//-1 т.к. без ведушего 00 (смс колл центр)
+		// -1 т.к. без ведушего 00 (смс колл центр)
 		return (sms.length() / 2 - 1);
 	}
 
-	}
+}
