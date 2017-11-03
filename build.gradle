@@ -12,6 +12,10 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 //apply plugin: 'jar'
 
+task wrapper(type: Wrapper) {
+  gradleVersion = '4.6'
+}
+
 //archivesBaseName = 'Concretepage'
 version = '1.1-RELEASE' 
 repositories {

@@ -24,10 +24,11 @@ import javafx.scene.control.ProgressBar;
 
 
 
-
+@SuppressWarnings("restriction")
 public class MainController {
 	
 		private Main mw;
+		
 		private ChangeListener<String> lr;
 		public void setMainWnd(Main m)
 		{
